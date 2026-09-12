@@ -58,7 +58,7 @@ body{font-family:Arial,sans-serif;background:#f9f6f0;color:#1a1a1a}
     <div style="font-size:48px;margin-bottom:12px">🧾</div>
     <h2 style="color:#2C2416;margin-bottom:8px">Kuittiarkisto</h2>
     <p style="color:#888;font-size:13px;margin-bottom:20px">Kirjaudu Google-tilillä tallentaaksesi kuitit Driveen</p>
-    <button class="btn" id="loginBtn">🔑 Kirjaudu Google-tilillä</button>
+    <button class="btn" id="loginBtn" onclick="yrytaKirjautua()">🔑 Kirjaudu Google-tilillä</button>
   </div>
 
   <div id="mainCard" style="display:none">
@@ -103,6 +103,15 @@ let kuukausi = new Date().getMonth();
 let vuosi = new Date().getFullYear();
 let tokenClient = null;
 
+function yrytaKirjautua(){
+  if(tokenClient){
+    tokenClient.requestAccessToken();
+  } else {
+    document.getElementById('loginBtn').textContent = '⏳ Ladataan...';
+    setTimeout(yrytaKirjautua, 500);
+  }
+}
+
 function fmt(n){ return Number(n).toLocaleString('fi-FI',{minimumFractionDigits:2,maximumFractionDigits:2})+' €'; }
 
 function googleLatautui(){
@@ -115,7 +124,13 @@ function googleLatautui(){
 }
 
 function googleVirhe(){
-  document.getElementById('loginBtn').textContent = '⚠️ Latausvirhe - päivitä sivu';
+  // Yritetään uudelleen
+  setTimeout(()=>{
+    const s = document.createElement('script');
+    s.src = 'https://accounts.google.com/gsi/client';
+    s.onload = googleLatautui;
+    document.head.appendChild(s);
+  }, 2000);
 }
 
 function kirjauduttu(){
