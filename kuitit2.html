@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Kuitit — Rakennustyö Kaivola & Ravattinen</title>
+<script src="https://accounts.google.com/gsi/client"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Arial,sans-serif;background:#f9f6f0;min-height:100vh;color:#1a1a1a}
+:root{--brown:#2C2416;--gold:#C9A560;--cream:#f9f6f0}
+.header{background:var(--brown);padding:12px 16px;border-bottom:3px solid var(--gold);display:flex;align-items:center;justify-content:space-between}
+.header-logo{color:var(--gold);font-weight:700;font-size:13px;letter-spacing:0.5px}
+.header-logo small{display:block;color:#aaa;font-size:10px;font-weight:400;letter-spacing:1px}
+.container{padding:16px;max-width:520px;margin:0 auto}
+.card{background:#fff;border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:0 1px 6px rgba(0,0,0,0.07)}
+.btn-primary{width:100%;background:var(--brown);color:var(--gold);border:none;border-radius:10px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:Arial,sans-serif}
+.btn-secondary{width:100%;background:transparent;color:var(--brown);border:1px solid var(--brown);border-radius:10px;padding:12px;font-size:14px;font-weight:600;cursor:pointer;font-family:Arial,sans-serif;margin-top:8px}
+.section-title{font-size:10px;color:#b8922a;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px}
+.kuitti-item{border:1px solid #e0d8c8;border-radius:10px;padding:12px;margin-bottom:10px;background:#faf8f4;position:relative}
+.kuitti-img{width:100%;border-radius:8px;margin-bottom:8px;max-height:200px;object-fit:cover;cursor:pointer}
+.kuitti-info{font-size:13px;color:#555}
+.kuitti-info strong{color:#1a1a1a;font-size:14px;display:block;margin-bottom:2px}
+.kuitti-del{position:absolute;top:10px;right:10px;background:#fee;border:1px solid #fcc;border-radius:6px;padding:4px 10px;color:#c00;cursor:pointer;font-size:13px;font-family:Arial,sans-serif}
+.upload-area{border:2px dashed var(--gold);border-radius:12px;padding:24px;text-align:center;cursor:pointer;background:#fdf6e8}
+.upload-area input{display:none}
+.upload-icon{font-size:36px;margin-bottom:8px}
+.upload-text{color:#888;font-size:13px}
+.loading{text-align:center;padding:20px;color:#888}
+.spinner{display:inline-block;width:24px;height:24px;border:3px solid #e0d8c8;border-top-color:var(--gold);border-radius:50%;animation:spin 0.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.month-select{display:flex;gap:8px;margin-bottom:14px}
+.month-btn{flex:1;padding:8px;border:1px solid #e0d8c8;border-radius:8px;background:#fff;font-size:13px;cursor:pointer;font-family:Arial,sans-serif}
+.month-btn.active{background:var(--brown);color:var(--gold);border-color:var(--brown);font-weight:700}
+.total-bar{background:var(--brown);color:#fff;border-radius:10px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.total-bar span{font-size:13px;color:#ccc}
+.total-bar strong{font-size:18px;color:var(--gold)}
+.login-box{text-align:center;padding:30px 20px}
+.login-box h2{color:var(--brown);margin-bottom:8px;font-size:20px}
+.login-box p{color:#888;font-size:13px;margin-bottom:20px;line-height:1.5}
+.status{font-size:12px;color:#888;margin-top:6px;text-align:center}
+.ai-result{background:#f0f8ff;border:1px solid #b8d4f0;border-radius:8px;padding:10px;margin-top:8px;font-size:13px}
+.img-modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:1000;align-items:center;justify-content:center}
+.img-modal.open{display:flex}
+.img-modal img{max-width:95%;max-height:95%;border-radius:8px}
+.img-modal-close{position:absolute;top:16px;right:16px;color:#fff;font-size:28px;cursor:pointer;background:rgba(0,0,0,0.5);width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-logo">
+    RAKENNUSTYÖ KAIVOLA & RAVATTINEN AY
+    <small>KUITTIEN HALLINTA</small>
+  </div>
+  <div id="userInfo" style="color:#aaa;font-size:11px;text-align:right"></div>
+</div>
+
+<!-- Kuvan suurennus modal -->
+<div class="img-modal" id="imgModal" onclick="closeModal()">
+  <div class="img-modal-close">×</div>
+  <img id="modalImg" src=""/>
+</div>
+
+<div class="container">
+
+  <!-- Kirjautuminen -->
+  <div id="loginView" class="card login-box" style="display:none">
+    <div style="font-size:48px;margin-bottom:12px">🧾</div>
+    <h2>Kuittiarkisto</h2>
+    <p>Kirjaudu Google-tilillä tallentaaksesi kuitit Google Driveen</p>
+    <div id="googleBtn"></div>
+    <div class="status" id="loginStatus"></div>
+  </div>
+
+  <!-- Päävalikko -->
+  <div id="mainView" style="display:none">
+
+    <!-- Kuukausi -->
+    <div class="month-select" id="monthBtns"></div>
+
+    <!-- Yhteensä -->
+    <div class="total-bar">
+      <span id="totalMonth">Tammikuu 2026</span>
+      <strong id="totalSum">0,00 €</strong>
+    </div>
+
+    <!-- Lisää kuitti -->
+    <div class="card">
+      <div class="section-title">Lisää kuitti</div>
+      <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+        <input type="file" id="fileInput" accept="image/*" capture="environment" onchange="handleFile(event)"/>
+        <div class="upload-icon">📷</div>
+        <div style="font-weight:600;margin-bottom:4px">Ota kuva tai valitse galleriasta</div>
+        <div class="upload-text">AI lukee päivämäärän, kaupan ja summan automaattisesti</div>
+      </div>
+      <div id="uploadStatus"></div>
+    </div>
+
+    <!-- Kuitit lista -->
+    <div class="card">
+      <div class="section-title">Kuitit tällä kuulla</div>
+      <div id="kuittiLista"><div class="loading">Ladataan...</div></div>
+    </div>
+
+    <!-- Lataa PDF -->
+    <button class="btn-primary" onclick="lataaYhteenveto()">⬇️ Lataa kuukausiyhteenveto</button>
+    <button class="btn-secondary" onclick="kirjauduUlos()">Kirjaudu ulos</button>
+  </div>
+
+</div>
+
+<script>
+const CLIENT_ID = '90611464108-hbis8vs6dconri9ef7njsjma1b9i5udm.apps.googleusercontent.com';
+const API_KEY_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+const ANTHROPIC_KEY = localStorage.getItem('anthropic_key');
+
+let accessToken = null;
+let currentUser = null;
+let kuitit = [];
+let selectedMonth = new Date().getMonth();
+let selectedYear = new Date().getFullYear();
+
+const MONTHS = ['Tammikuu','Helmikuu','Maaliskuu','Huhtikuu','Toukokuu','Kesäkuu',
+                 'Heinäkuu','Elokuu','Syyskuu','Lokakuu','Marraskuu','Joulukuu'];
+
+function fmt(n){
+  return Number(n).toLocaleString('fi-FI',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';
+}
+
+// Google kirjautuminen
+function initApp(){
+  // Tarkista API-avain
+  if(!localStorage.getItem('anthropic_key')){
+    const key = prompt('Anna Anthropic API-avain (sk-ant-...):');
+    if(key && key.startsWith('sk-')) localStorage.setItem('anthropic_key', key);
+  }
+
+  google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: API_KEY_SCOPE,
+    callback: (response) => {
+      if(response.access_token){
+        accessToken = response.access_token;
+        naytaPaasivu();
+      }
+    }
+  });
+
+  const tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: API_KEY_SCOPE + ' https://www.googleapis.com/auth/drive.metadata.readonly',
+    callback: (response) => {
+      if(response.access_token){
+        accessToken = response.access_token;
+        naytaPaasivu();
+      }
+    }
+  });
+
+  // Näytä kirjautumisnappi
+  document.getElementById('loginView').style.display = 'block';
+  
+  google.accounts.id.initialize({
+    client_id: CLIENT_ID,
+    callback: handleCredentialResponse
+  });
+
+  const btn = document.createElement('button');
+  btn.className = 'btn-primary';
+  btn.innerHTML = '🔑 Kirjaudu Google-tilillä';
+  btn.onclick = () => tokenClient.requestAccessToken();
+  document.getElementById('googleBtn').appendChild(btn);
+
+  // Rakenna kuukausinapit
+  buildMonthBtns();
+};
+
+function handleCredentialResponse(response){ }
+
+function naytaPaasivu(){
+  document.getElementById('loginView').style.display = 'none';
+  document.getElementById('mainView').style.display = 'block';
+  lataaDriveKuitit();
+}
+
+function buildMonthBtns(){
+  const c = document.getElementById('monthBtns');
+  c.innerHTML = '';
+  const now = new Date();
+  for(let i=2; i>=0; i--){
+    const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
+    const m = d.getMonth(), y = d.getFullYear();
+    const btn = document.createElement('button');
+    btn.className = 'month-btn' + (m===selectedMonth&&y===selectedYear?' active':'');
+    btn.textContent = MONTHS[m].slice(0,3);
+    btn.onclick = () => { selectedMonth=m; selectedYear=y; buildMonthBtns(); paivitaLista(); };
+    c.appendChild(btn);
+  }
+}
+
+async function handleFile(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  
+  const status = document.getElementById('uploadStatus');
+  status.innerHTML = '<div class="loading"><div class="spinner"></div><br>AI lukee kuittia...</div>';
+
+  try {
+    // Muunna base64
+    const base64 = await fileToBase64(file);
+    
+    // AI lukee kuitin
+    const aiData = await lueKuittiAI(base64, file.type);
+    
+    // Tallenna Drive-kansioon
+    status.innerHTML = '<div class="loading"><div class="spinner"></div><br>Tallennetaan Google Driveen...</div>';
+    const driveId = await tallennaKuvaDriveren(file, base64, aiData);
+    
+    // Lisää listaan
+    const kuitti = {
+      id: driveId,
+      kauppa: aiData.kauppa || 'Tuntematon',
+      summa: aiData.summa || 0,
+      pvm: aiData.pvm || new Date().toLocaleDateString('fi-FI'),
+      kuvaus: aiData.kuvaus || '',
+      imgBase64: base64,
+      imgType: file.type,
+      month: selectedMonth,
+      year: selectedYear
+    };
+    
+    kuitit.push(kuitti);
+    paivitaLista();
+    status.innerHTML = '<div style="color:green;text-align:center;padding:8px">✓ Kuitti tallennettu!</div>';
+    setTimeout(() => status.innerHTML = '', 3000);
+    
+  } catch(e) {
+    status.innerHTML = `<div style="color:red;padding:8px">Virhe: ${e.message}</div>`;
+  }
+  event.target.value = '';
+}
+
+async function fileToBase64(file){
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
+async function lueKuittiAI(base64, mimeType){
+  const apiKey = localStorage.getItem('anthropic_key');
+  if(!apiKey) throw new Error('API-avain puuttuu');
+  
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 500,
+      messages: [{
+        role: 'user',
+        content: [
+          {type: 'image', source: {type: 'base64', media_type: mimeType, data: base64}},
+          {type: 'text', text: 'Lue tästä kuitista tiedot. Palauta VAIN JSON:\n{"kauppa":"kaupan nimi","summa":0.00,"pvm":"pp.kk.vvvv","kuvaus":"lyhyt kuvaus ostoksesta"}\nSumma euroina ilman €-merkkiä. Jos ei löydy, laita null.'}
+        ]
+      }]
+    })
+  });
+  const data = await resp.json();
+  const text = data.content?.[0]?.text || '{}';
+  return JSON.parse(text.replace(/```json|```/g,'').trim());
+}
+
+async function tallennaKuvaDriveren(file, base64, aiData){
+  // Luo kansio jos ei ole
+  const folderName = `Kuitit ${selectedYear}/${MONTHS[selectedMonth]}`;
+  const folderId = await getOrCreateFolder(folderName);
+  
+  // Tiedostonimi
+  const nimi = `${aiData.pvm||'kuitti'}_${aiData.kauppa||'kauppa'}.${file.name.split('.').pop()}`;
+  
+  // Lähetä kuva
+  const meta = JSON.stringify({name: nimi, parents: [folderId]});
+  const form = new FormData();
+  form.append('metadata', new Blob([meta], {type:'application/json'}));
+  form.append('file', file);
+  
+  const resp = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+    method: 'POST',
+    headers: {'Authorization': 'Bearer ' + accessToken},
+    body: form
+  });
+  const data = await resp.json();
+  return data.id;
+}
+
+async function getOrCreateFolder(path){
+  const parts = path.split('/');
+  let parentId = 'root';
+  
+  for(const part of parts){
+    const query = `name='${part}' and mimeType='application/vnd.google-apps.folder' and '${parentId}' in parents and trashed=false`;
+    const resp = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id)`, {
+      headers: {'Authorization': 'Bearer ' + accessToken}
+    });
+    const data = await resp.json();
+    
+    if(data.files && data.files.length > 0){
+      parentId = data.files[0].id;
+    } else {
+      const createResp = await fetch('https://www.googleapis.com/drive/v3/files', {
+        method: 'POST',
+        headers: {'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'application/json'},
+        body: JSON.stringify({name: part, mimeType: 'application/vnd.google-apps.folder', parents: [parentId]})
+      });
+      const created = await createResp.json();
+      parentId = created.id;
+    }
+  }
+  return parentId;
+}
+
+async function lataaDriveKuitit(){
+  if(!accessToken) return;
+  try {
+    const folderName = `Kuitit ${selectedYear}/${MONTHS[selectedMonth]}`;
+    // Lataa kuitit muistista toistaiseksi (Drive-lataus myöhemmin)
+    paivitaLista();
+  } catch(e) {
+    console.error(e);
+  }
+}
+
+function paivitaLista(){
+  const lista = kuitit.filter(k => k.month===selectedMonth && k.year===selectedYear);
+  const container = document.getElementById('kuittiLista');
+  
+  // Päivitä yhteensä
+  const sum = lista.reduce((s,k) => s+(parseFloat(k.summa)||0), 0);
+  document.getElementById('totalSum').textContent = fmt(sum);
+  document.getElementById('totalMonth').textContent = MONTHS[selectedMonth] + ' ' + selectedYear;
+  
+  if(lista.length === 0){
+    container.innerHTML = '<div style="text-align:center;color:#aaa;padding:20px">Ei kuitteja tällä kuulla</div>';
+    return;
+  }
+  
+  container.innerHTML = lista.map((k,i) => `
+    <div class="kuitti-item">
+      <img class="kuitti-img" src="data:${k.imgType};base64,${k.imgBase64}" 
+           onclick="openModal('data:${k.imgType};base64,${k.imgBase64}')" alt="Kuitti"/>
+      <div class="kuitti-info">
+        <strong>${k.kauppa}</strong>
+        ${k.pvm} · ${fmt(k.summa)}
+        ${k.kuvaus ? `<div style="color:#888;font-size:12px;margin-top:2px">${k.kuvaus}</div>` : ''}
+      </div>
+      <button class="kuitti-del" onclick="poistaKuitti(${i})">×</button>
+    </div>
+  `).join('');
+}
+
+function poistaKuitti(idx){
+  const lista = kuitit.filter(k => k.month===selectedMonth && k.year===selectedYear);
+  const kuitti = lista[idx];
+  if(confirm(`Poista kuitti: ${kuitti.kauppa}?`)){
+    const globalIdx = kuitit.indexOf(kuitti);
+    kuitit.splice(globalIdx, 1);
+    paivitaLista();
+  }
+}
+
+function openModal(src){
+  document.getElementById('modalImg').src = src;
+  document.getElementById('imgModal').classList.add('open');
+}
+function closeModal(){
+  document.getElementById('imgModal').classList.remove('open');
+}
+
+function lataaYhteenveto(){
+  const lista = kuitit.filter(k => k.month===selectedMonth && k.year===selectedYear);
+  if(lista.length === 0){ alert('Ei kuitteja tällä kuulla'); return; }
+  
+  const sum = lista.reduce((s,k) => s+(parseFloat(k.summa)||0), 0);
+  
+  const html = `<!DOCTYPE html><html lang="fi"><head><meta charset="UTF-8"/>
+  <style>
+    body{font-family:Arial,sans-serif;margin:20mm;color:#1a1a1a}
+    h1{color:#2C2416;font-size:22pt;margin-bottom:4mm}
+    h2{color:#b8922a;font-size:10pt;margin-bottom:8mm;font-weight:400}
+    .kuitti{page-break-inside:avoid;margin-bottom:12mm;border:1px solid #ddd;border-radius:4px;padding:8mm}
+    .kuitti img{max-width:100%;max-height:120mm;object-fit:contain;display:block;margin-bottom:4mm}
+    .kuitti-info{font-size:10pt}
+    .kuitti-info strong{font-size:12pt;display:block;margin-bottom:2mm}
+    .total{background:#2C2416;color:#C9A560;padding:8mm;border-radius:4px;margin-top:8mm;font-size:14pt;font-weight:700;display:flex;justify-content:space-between}
+    @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+  </style></head><body>
+  <h1>Kuittien yhteenveto</h1>
+  <h2>Rakennustyö Kaivola & Ravattinen Ay — ${MONTHS[selectedMonth]} ${selectedYear}</h2>
+  ${lista.map(k => `
+    <div class="kuitti">
+      <img src="data:${k.imgType};base64,${k.imgBase64}" alt="Kuitti"/>
+      <div class="kuitti-info">
+        <strong>${k.kauppa}</strong>
+        Päivämäärä: ${k.pvm}<br/>
+        Summa: <strong>${fmt(k.summa)}</strong>
+        ${k.kuvaus ? `<br/>Kuvaus: ${k.kuvaus}` : ''}
+      </div>
+    </div>
+  `).join('')}
+  <div class="total"><span>YHTEENSÄ ${MONTHS[selectedMonth]} ${selectedYear}</span><span>${fmt(sum)}</span></div>
+  <script>window.onload=function(){window.print()}<\/script>
+  </body></html>`;
+  
+  const w = window.open('','_blank');
+  if(w){ w.document.write(html); w.document.close(); }
+  else { alert('Salli ponnahdusikkunat selaimessa'); }
+}
+
+function kirjauduUlos(){
+  accessToken = null;
+  kuitit = [];
+  document.getElementById('mainView').style.display = 'none';
+  document.getElementById('loginView').style.display = 'block';
+}
+
+function waitForGoogle(){
+  if(typeof google !== 'undefined'){
+    initApp();
+  } else {
+    setTimeout(waitForGoogle, 100);
+  }
+}
+window.onload = waitForGoogle;
+</script>
+</body>
+</html>
