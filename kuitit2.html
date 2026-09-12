@@ -136,50 +136,10 @@ function fmt(n){
 
 // Google kirjautuminen
 function initApp(){
-  // Tarkista API-avain
   if(!localStorage.getItem('anthropic_key')){
     const key = prompt('Anna Anthropic API-avain (sk-ant-...):');
     if(key && key.startsWith('sk-')) localStorage.setItem('anthropic_key', key);
   }
-
-  google.accounts.oauth2.initTokenClient({
-    client_id: CLIENT_ID,
-    scope: API_KEY_SCOPE,
-    callback: (response) => {
-      if(response.access_token){
-        accessToken = response.access_token;
-        naytaPaasivu();
-      }
-    }
-  });
-
-  const tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: CLIENT_ID,
-    scope: API_KEY_SCOPE + ' https://www.googleapis.com/auth/drive.metadata.readonly',
-    callback: (response) => {
-      if(response.access_token){
-        accessToken = response.access_token;
-        naytaPaasivu();
-      }
-    }
-  });
-
-  // Näytä kirjautumisnappi
-  document.getElementById('loginView').style.display = 'block';
-  
-  google.accounts.id.initialize({
-    client_id: CLIENT_ID,
-    callback: handleCredentialResponse
-  });
-
-  const btn = document.createElement('button');
-  btn.className = 'btn-primary';
-  btn.innerHTML = '🔑 Kirjaudu Google-tilillä';
-  btn.onclick = () => tokenClient.requestAccessToken();
-  document.getElementById('googleBtn').appendChild(btn);
-
-  // Rakenna kuukausinapit
-  buildMonthBtns();
 };
 
 function handleCredentialResponse(response){ }
@@ -446,14 +406,39 @@ function kirjauduUlos(){
   document.getElementById('loginView').style.display = 'block';
 }
 
-function waitForGoogle(){
-  if(typeof google !== 'undefined'){
-    initApp();
-  } else {
-    setTimeout(waitForGoogle, 100);
+window.onload = function(){
+  // Näytä kirjautumisnappi heti
+  document.getElementById('loginView').style.display = 'block';
+  buildMonthBtns();
+  // Odota Google-kirjastoa
+  function tryGoogle(){
+    if(typeof google !== 'undefined'){
+      initGoogleAuth();
+    } else {
+      setTimeout(tryGoogle, 200);
+    }
   }
+  tryGoogle();
+};
+
+function initGoogleAuth(){
+  const tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: API_KEY_SCOPE + ' https://www.googleapis.com/auth/drive.metadata.readonly',
+    callback: (response) => {
+      if(response.access_token){
+        accessToken = response.access_token;
+        naytaPaasivu();
+      }
+    }
+  });
+  const btn = document.createElement('button');
+  btn.className = 'btn-primary';
+  btn.innerHTML = '🔑 Kirjaudu Google-tilillä';
+  btn.onclick = () => tokenClient.requestAccessToken();
+  document.getElementById('googleBtn').innerHTML = '';
+  document.getElementById('googleBtn').appendChild(btn);
 }
-window.onload = waitForGoogle;
 </script>
 </body>
 </html>
