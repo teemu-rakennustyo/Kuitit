@@ -89,6 +89,7 @@ body{font-family:Arial,sans-serif;background:#f9f6f0;color:#1a1a1a}
     </div>
 
     <button class="btn" onclick="lataaPDF()">⬇️ Lataa kuukausiraportti</button>
+    <button class="btn btn-outline" onclick="vaihdaAvain()">🔑 Vaihda API-avain</button>
     <button class="btn btn-outline" onclick="kirjauduUlos()">Kirjaudu ulos</button>
   </div>
 
@@ -143,13 +144,18 @@ function kirjauduttu(){
   // Tarkista API-avain
   if(!localStorage.getItem('sk')){
     const key = prompt('Anna Anthropic API-avain (sk-ant-...):');
-    if(key) localStorage.setItem('sk', key);
+    if(key) localStorage.setItem('sk', key.trim());
   }
   document.getElementById('loginCard').style.display = 'none';
   document.getElementById('mainCard').style.display = 'block';
   lataaTallennetut();
   rakennaNapit();
   paivita();
+}
+
+function vaihdaAvain(){
+  const key = prompt('Anna uusi Anthropic API-avain (sk-ant-...):', localStorage.getItem('sk')||'');
+  if(key) { localStorage.setItem('sk', key.trim()); alert('API-avain päivitetty.'); }
 }
 
 function kirjauduUlos(){
