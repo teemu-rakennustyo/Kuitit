@@ -55,6 +55,16 @@ body{font-family:Arial,sans-serif;background:#f9f6f0;color:#1a1a1a}
   <img id="modalImg" src=""/>
 </div>
 
+<div class="modal" id="keyModal" style="background:rgba(0,0,0,0.75)">
+  <div style="background:#fff;border-radius:12px;padding:20px;width:85%;max-width:360px" onclick="event.stopPropagation()">
+    <h3 style="color:#2C2416;margin-bottom:10px;font-size:16px">Anthropic API-avain</h3>
+    <input id="keyInput" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="sk-ant-api03-..." style="width:100%;border:1px solid #e0d8c8;border-radius:8px;padding:10px;font-size:13px;margin-bottom:6px;font-family:monospace"/>
+    <div id="keyInfo" style="font-size:11px;color:#888;margin-bottom:14px"></div>
+    <button class="btn" style="margin-bottom:8px" onclick="tallennaAvain()">Tallenna</button>
+    <button class="btn btn-outline" onclick="document.getElementById('keyModal').classList.remove('open')">Peruuta</button>
+  </div>
+</div>
+
 <div class="container">
 
   <div id="loginCard" class="card" style="text-align:center;padding:30px">
@@ -141,21 +151,35 @@ s.onerror = function(){
 document.head.appendChild(s);
 
 function kirjauduttu(){
-  // Tarkista API-avain
-  if(!localStorage.getItem('sk')){
-    const key = prompt('Anna Anthropic API-avain (sk-ant-...):');
-    if(key) localStorage.setItem('sk', key.trim());
-  }
   document.getElementById('loginCard').style.display = 'none';
   document.getElementById('mainCard').style.display = 'block';
   lataaTallennetut();
   rakennaNapit();
   paivita();
+  if(!localStorage.getItem('sk')){
+    setTimeout(vaihdaAvain, 300);
+  }
 }
 
 function vaihdaAvain(){
-  const key = prompt('Anna uusi Anthropic API-avain (sk-ant-...):', localStorage.getItem('sk')||'');
-  if(key) { localStorage.setItem('sk', key.trim()); alert('API-avain päivitetty.'); }
+  const nykyinen = localStorage.getItem('sk') || '';
+  document.getElementById('keyInput').value = nykyinen;
+  document.getElementById('keyInfo').textContent = nykyinen
+    ? ('Nykyinen avain päättyy: ...' + nykyinen.slice(-6))
+    : 'Ei tallennettua avainta vielä.';
+  document.getElementById('keyModal').classList.add('open');
+}
+
+function tallennaAvain(){
+  const raw = document.getElementById('keyInput').value;
+  const key = raw.trim();
+  if(!key){ alert('Anna avain ensin.'); return; }
+  if(!key.startsWith('sk-ant-')){
+    if(!confirm('Avain ei ala tavalliseen tapaan "sk-ant-". Tallennetaanko silti?')) return;
+  }
+  localStorage.setItem('sk', key);
+  document.getElementById('keyModal').classList.remove('open');
+  alert('Avain tallennettu. Päättyy: ...' + key.slice(-6));
 }
 
 function kirjauduUlos(){
@@ -246,7 +270,8 @@ async function lisaaKuitti(e){
     st.innerHTML='<div class="status" style="color:green">✓ Tallennettu!</div>';
     setTimeout(()=>st.innerHTML='',3000);
   }catch(err){
-    st.innerHTML=`<div class="status" style="color:red">Virhe: ${err.message}</div>`;
+    const sk=localStorage.getItem('sk')||'';
+    st.innerHTML=`<div class="status" style="color:red">Virhe: ${err.message}<br><small>Käytetty avain päättyy: ...${sk.slice(-6)||'(ei avainta)'}</small></div>`;
   }
 }
 
