@@ -30,6 +30,9 @@ body{font-family:Arial,sans-serif;background:#f9f6f0;color:#1a1a1a}
 .kuitti h3{font-size:14px;margin-bottom:2px}
 .kuitti p{font-size:12px;color:#777}
 .kuitti .sum{font-size:14px;font-weight:700;color:#2C2416}
+.kuitti input{display:block;width:100%;border:1px solid #e0d8c8;border-radius:6px;padding:6px 8px;font-size:13px;font-family:Arial,sans-serif;margin-bottom:6px;background:#fff;color:#1a1a1a}
+.kuitti input.edit-kauppa{font-weight:700;font-size:14px}
+.kuitti input.edit-summa{font-weight:700;color:#2C2416;max-width:140px}
 .del{position:absolute;top:10px;right:10px;background:#fee;border:1px solid #fcc;border-radius:6px;padding:3px 9px;color:#c00;cursor:pointer;font-size:13px;font-family:Arial,sans-serif}
 .status{text-align:center;padding:12px;color:#888;font-size:13px}
 .spinner{display:inline-block;width:20px;height:20px;border:3px solid #e0d8c8;border-top-color:#C9A560;border-radius:50%;animation:spin 0.8s linear infinite;vertical-align:middle;margin-right:6px}
@@ -104,6 +107,22 @@ let tokenClient = null;
 
 function fmt(n){ return Number(n).toLocaleString('fi-FI',{minimumFractionDigits:2,maximumFractionDigits:2})+' €'; }
 
+function lataaTallennetut(){
+  try{
+    const raw = localStorage.getItem('kuitit_data');
+    if(raw) kuitit = JSON.parse(raw);
+  }catch(e){ console.error('Ei voitu ladata tallennettuja kuitteja', e); }
+}
+
+function tallennaLokaalisti(){
+  try{
+    localStorage.setItem('kuitit_data', JSON.stringify(kuitit));
+  }catch(e){
+    console.error('Tallennus paikallisesti epäonnistui (tila loppui?)', e);
+    alert('Huom: kuitteja ei voitu tallentaa puhelimen muistiin (tila täynnä). Ne ovat silti Google Drivessa.');
+  }
+}
+
 // Ladataan Google-kirjasto dynaamisesti
 const s = document.createElement('script');
 s.src = 'https://accounts.google.com/gsi/client';
@@ -128,6 +147,7 @@ function kirjauduttu(){
   }
   document.getElementById('loginCard').style.display = 'none';
   document.getElementById('mainCard').style.display = 'block';
+  lataaTallennetut();
   rakennaNapit();
   paivita();
 }
@@ -163,17 +183,26 @@ function paivita(){
   el.innerHTML=lista.map((k,i)=>`
     <div class="kuitti">
       <img src="data:${k.type};base64,${k.b64}" onclick="document.getElementById('modalImg').src=this.src;document.getElementById('modal').classList.add('open')"/>
-      <h3>${k.kauppa||'Tuntematon'}</h3>
-      <p>${k.pvm||''} ${k.kuvaus?'· '+k.kuvaus:''}</p>
-      <span class="sum">${fmt(k.summa||0)}</span>
+      <input class="edit-kauppa" data-i="${i}" value="${(k.kauppa||'').replace(/"/g,'&quot;')}" placeholder="Kauppa" onchange="muokkaa(${i},'kauppa',this.value)"/>
+      <input class="edit-pvm" data-i="${i}" value="${(k.pvm||'').replace(/"/g,'&quot;')}" placeholder="pp.kk.vvvv" onchange="muokkaa(${i},'pvm',this.value)"/>
+      <input class="edit-summa" data-i="${i}" type="number" step="0.01" value="${k.summa||''}" placeholder="0.00" onchange="muokkaa(${i},'summa',this.value)"/>
       <button class="del" onclick="poista(${i})">×</button>
     </div>`).join('');
+}
+
+function muokkaa(idx, kentta, arvo){
+  const lista=kuitit.filter(k=>k.m===kuukausi&&k.y===vuosi);
+  const k=lista[idx];
+  if(!k) return;
+  k[kentta] = kentta==='summa' ? (parseFloat(arvo)||0) : arvo;
+  tallennaLokaalisti();
+  paivita();
 }
 
 function poista(idx){
   const lista=kuitit.filter(k=>k.m===kuukausi&&k.y===vuosi);
   const k=lista[idx];
-  if(confirm('Poista: '+(k.kauppa||'kuitti')+'?')){ kuitit.splice(kuitit.indexOf(k),1); paivita(); }
+  if(confirm('Poista: '+(k.kauppa||'kuitti')+'?')){ kuitit.splice(kuitit.indexOf(k),1); tallennaLokaalisti(); paivita(); }
 }
 
 async function lisaaKuitti(e){
@@ -188,17 +217,25 @@ async function lisaaKuitti(e){
     const ai=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:300,messages:[{role:'user',content:[
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1024,messages:[{role:'user',content:[
         {type:'image',source:{type:'base64',media_type:file.type,data:b64}},
-        {type:'text',text:'Lue kuitista: kaupan nimi, loppusumma euroina, päivämäärä pp.kk.vvvv, lyhyt kuvaus. Palauta VAIN JSON: {"kauppa":"","summa":0.00,"pvm":"","kuvaus":""}'}
+        {type:'text',text:'Lue tästä kuitista: kaupan/yrityksen nimi, kuitin KOKONAISLOPPUSUMMA euroina (etsi teksti kuten "Yhteensä", "Summa", "Maksettu"), ostopäivämäärä muodossa pp.kk.vvvv, ja hyvin lyhyt (max 5 sanaa) kuvaus ostoksesta. Vastaa PELKÄLLÄ JSON-oliolla, ei muuta tekstiä ennen tai jälkeen, ei selityksiä: {"kauppa":"","summa":0.00,"pvm":"","kuvaus":""}. Jos jokin tieto ei löydy kuitista, käytä tyhjää merkkijonoa "" (summalle 0).'}
       ]}]})
     });
     const data=await ai.json();
+    if(data.error) throw new Error('AI-virhe: '+(data.error.message||JSON.stringify(data.error)));
     let info={};
-    try{ info=JSON.parse((data.content?.[0]?.text||'{}').replace(/```json|```/g,'').trim()); }catch{}
+    const raw=(data.content?.[0]?.text||'{}').replace(/```json|```/g,'').trim();
+    try{ info=JSON.parse(raw); }
+    catch(parseErr){
+      const match=raw.match(/\{[\s\S]*\}/);
+      if(match){ try{ info=JSON.parse(match[0]); }catch{} }
+      if(!info.kauppa && !info.summa) console.warn('AI-vastausta ei voitu jäsentää:', raw);
+    }
     st.innerHTML='<div class="status"><span class="spinner"></span>Tallennetaan Driveen...</div>';
     await tallennaDrive(file,info);
     kuitit.push({...info,b64,type:file.type,m:kuukausi,y:vuosi});
+    tallennaLokaalisti();
     paivita();
     st.innerHTML='<div class="status" style="color:green">✓ Tallennettu!</div>';
     setTimeout(()=>st.innerHTML='',3000);
