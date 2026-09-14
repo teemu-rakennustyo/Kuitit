@@ -12,11 +12,11 @@ body{font-family:Arial,sans-serif;background:#f9f6f0;color:#1a1a1a}
 .header p{color:#aaa;font-size:10px;letter-spacing:1px;margin-top:2px}
 .container{padding:16px;max-width:520px;margin:0 auto}
 .card{background:#fff;border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:0 1px 6px rgba(0,0,0,0.07)}
-.btn{width:100%;background:#2C2416;color:#C9A560;border:none;border-radius:10px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:8px}
-.btn-outline{background:transparent;color:#2C2416;border:1px solid #2C2416;color:#2C2416}
+.btn{width:100%;background:#2C2416;color:#C9A560;border:none;border-radius:10px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:8px;font-family:Arial,sans-serif}
+.btn-outline{background:transparent;border:1px solid #2C2416;color:#2C2416}
 .gold-label{font-size:10px;color:#b8922a;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px}
 .month-row{display:flex;gap:8px;margin-bottom:12px}
-.mbtn{flex:1;padding:8px;border:1px solid #e0d8c8;border-radius:8px;background:#fff;font-size:13px;cursor:pointer}
+.mbtn{flex:1;padding:8px;border:1px solid #e0d8c8;border-radius:8px;background:#fff;font-size:13px;cursor:pointer;font-family:Arial,sans-serif}
 .mbtn.active{background:#2C2416;color:#C9A560;border-color:#2C2416;font-weight:700}
 .total{background:#2C2416;color:#fff;border-radius:10px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
 .total span{font-size:13px;color:#ccc}
@@ -30,7 +30,7 @@ body{font-family:Arial,sans-serif;background:#f9f6f0;color:#1a1a1a}
 .kuitti h3{font-size:14px;margin-bottom:2px}
 .kuitti p{font-size:12px;color:#777}
 .kuitti .sum{font-size:14px;font-weight:700;color:#2C2416}
-.del{position:absolute;top:10px;right:10px;background:#fee;border:1px solid #fcc;border-radius:6px;padding:3px 9px;color:#c00;cursor:pointer;font-size:13px}
+.del{position:absolute;top:10px;right:10px;background:#fee;border:1px solid #fcc;border-radius:6px;padding:3px 9px;color:#c00;cursor:pointer;font-size:13px;font-family:Arial,sans-serif}
 .status{text-align:center;padding:12px;color:#888;font-size:13px}
 .spinner{display:inline-block;width:20px;height:20px;border:3px solid #e0d8c8;border-top-color:#C9A560;border-radius:50%;animation:spin 0.8s linear infinite;vertical-align:middle;margin-right:6px}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -58,7 +58,7 @@ body{font-family:Arial,sans-serif;background:#f9f6f0;color:#1a1a1a}
     <div style="font-size:48px;margin-bottom:12px">🧾</div>
     <h2 style="color:#2C2416;margin-bottom:8px">Kuittiarkisto</h2>
     <p style="color:#888;font-size:13px;margin-bottom:20px">Kirjaudu Google-tilillä tallentaaksesi kuitit Driveen</p>
-    <button class="btn" id="loginBtn" onclick="yrytaKirjautua()">🔑 Kirjaudu Google-tilillä</button>
+    <button class="btn" id="loginBtn">🔑 Kirjaudu Google-tilillä</button>
   </div>
 
   <div id="mainCard" style="display:none">
@@ -70,13 +70,13 @@ body{font-family:Arial,sans-serif;background:#f9f6f0;color:#1a1a1a}
       <div class="upload-grid">
         <div class="upload-btn" onclick="document.getElementById('cam').click()">
           <div>📷</div><span>Kamera</span>
-          <input id="cam" type="file" accept="image/*" capture="environment" style="display:none" onchange="lisaaKuitti(event)"/>
         </div>
         <div class="upload-btn" onclick="document.getElementById('gal').click()">
           <div>🖼️</div><span>Galleria</span>
-          <input id="gal" type="file" accept="image/*" style="display:none" onchange="lisaaKuitti(event)"/>
         </div>
       </div>
+      <input id="cam" type="file" accept="image/*" capture="environment" style="display:none" onchange="lisaaKuitti(event)"/>
+      <input id="gal" type="file" accept="image/*" style="display:none" onchange="lisaaKuitti(event)"/>
       <div id="uploadStatus"></div>
     </div>
 
@@ -91,7 +91,6 @@ body{font-family:Arial,sans-serif;background:#f9f6f0;color:#1a1a1a}
 
 </div>
 
-<script src="https://accounts.google.com/gsi/client" onload="googleLatautui()" onerror="googleVirhe()"></script>
 <script>
 const CLIENT_ID = '90611464108-hbis8vs6dconri9ef7njsjma1b9i5udm.apps.googleusercontent.com';
 const SCOPE = 'https://www.googleapis.com/auth/drive.file';
@@ -103,37 +102,30 @@ let kuukausi = new Date().getMonth();
 let vuosi = new Date().getFullYear();
 let tokenClient = null;
 
-function yrytaKirjautua(){
-  if(tokenClient){
-    tokenClient.requestAccessToken();
-  } else {
-    document.getElementById('loginBtn').textContent = '⏳ Ladataan...';
-    setTimeout(yrytaKirjautua, 500);
-  }
-}
-
 function fmt(n){ return Number(n).toLocaleString('fi-FI',{minimumFractionDigits:2,maximumFractionDigits:2})+' €'; }
 
-function googleLatautui(){
+// Ladataan Google-kirjasto dynaamisesti
+const s = document.createElement('script');
+s.src = 'https://accounts.google.com/gsi/client';
+s.onload = function(){
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: CLIENT_ID,
     scope: SCOPE,
     callback: (r) => { if(r.access_token){ token=r.access_token; kirjauduttu(); } }
   });
   document.getElementById('loginBtn').onclick = () => tokenClient.requestAccessToken();
-}
-
-function googleVirhe(){
-  // Yritetään uudelleen
-  setTimeout(()=>{
-    const s = document.createElement('script');
-    s.src = 'https://accounts.google.com/gsi/client';
-    s.onload = googleLatautui;
-    document.head.appendChild(s);
-  }, 2000);
-}
+};
+s.onerror = function(){
+  document.getElementById('loginBtn').textContent = '⚠️ Päivitä sivu';
+};
+document.head.appendChild(s);
 
 function kirjauduttu(){
+  // Tarkista API-avain
+  if(!localStorage.getItem('sk')){
+    const key = prompt('Anna Anthropic API-avain (sk-ant-...):');
+    if(key) localStorage.setItem('sk', key);
+  }
   document.getElementById('loginCard').style.display = 'none';
   document.getElementById('mainCard').style.display = 'block';
   rakennaNapit();
@@ -141,34 +133,34 @@ function kirjauduttu(){
 }
 
 function kirjauduUlos(){
-  token = null; kuitit = [];
-  document.getElementById('mainCard').style.display = 'none';
-  document.getElementById('loginCard').style.display = 'block';
+  token=null; kuitit=[];
+  document.getElementById('mainCard').style.display='none';
+  document.getElementById('loginCard').style.display='block';
 }
 
 function rakennaNapit(){
   const c = document.getElementById('monthRow');
-  c.innerHTML = '';
+  c.innerHTML='';
   const now = new Date();
   for(let i=2;i>=0;i--){
     const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
     const m=d.getMonth(), y=d.getFullYear();
     const b = document.createElement('button');
-    b.className = 'mbtn'+(m===kuukausi&&y===vuosi?' active':'');
-    b.textContent = MONTHS[m].slice(0,3);
-    b.onclick = ()=>{ kuukausi=m; vuosi=y; rakennaNapit(); paivita(); };
+    b.className='mbtn'+(m===kuukausi&&y===vuosi?' active':'');
+    b.textContent=MONTHS[m].slice(0,3);
+    b.onclick=()=>{ kuukausi=m; vuosi=y; rakennaNapit(); paivita(); };
     c.appendChild(b);
   }
 }
 
 function paivita(){
-  const lista = kuitit.filter(k=>k.m===kuukausi&&k.y===vuosi);
-  const sum = lista.reduce((s,k)=>s+(parseFloat(k.summa)||0),0);
-  document.getElementById('totalSum').textContent = fmt(sum);
-  document.getElementById('monthLabel').textContent = MONTHS[kuukausi]+' '+vuosi;
-  const el = document.getElementById('lista');
+  const lista=kuitit.filter(k=>k.m===kuukausi&&k.y===vuosi);
+  const sum=lista.reduce((s,k)=>s+(parseFloat(k.summa)||0),0);
+  document.getElementById('totalSum').textContent=fmt(sum);
+  document.getElementById('monthLabel').textContent=MONTHS[kuukausi]+' '+vuosi;
+  const el=document.getElementById('lista');
   if(!lista.length){ el.innerHTML='<div class="status">Ei kuitteja tällä kuulla</div>'; return; }
-  el.innerHTML = lista.map((k,i)=>`
+  el.innerHTML=lista.map((k,i)=>`
     <div class="kuitti">
       <img src="data:${k.type};base64,${k.b64}" onclick="document.getElementById('modalImg').src=this.src;document.getElementById('modal').classList.add('open')"/>
       <h3>${k.kauppa||'Tuntematon'}</h3>
@@ -179,44 +171,39 @@ function paivita(){
 }
 
 function poista(idx){
-  const lista = kuitit.filter(k=>k.m===kuukausi&&k.y===vuosi);
-  const k = lista[idx];
-  if(confirm('Poista: '+k.kauppa+'?')){ kuitit.splice(kuitit.indexOf(k),1); paivita(); }
+  const lista=kuitit.filter(k=>k.m===kuukausi&&k.y===vuosi);
+  const k=lista[idx];
+  if(confirm('Poista: '+(k.kauppa||'kuitti')+'?')){ kuitit.splice(kuitit.indexOf(k),1); paivita(); }
 }
 
 async function lisaaKuitti(e){
-  const file = e.target.files[0];
+  const file=e.target.files[0];
   if(!file) return;
   e.target.value='';
-  const st = document.getElementById('uploadStatus');
-  st.innerHTML = '<div class="status"><span class="spinner"></span>AI lukee kuittia...</div>';
-  try {
-    const b64 = await toB64(file);
-    const apiKey = localStorage.getItem('sk') || prompt('Anna Anthropic API-avain (sk-ant-...):');
-    if(apiKey&&apiKey.startsWith('sk')) localStorage.setItem('sk', apiKey);
-    
-    const ai = await fetch('https://api.anthropic.com/v1/messages',{
+  const st=document.getElementById('uploadStatus');
+  st.innerHTML='<div class="status"><span class="spinner"></span>AI lukee kuittia...</div>';
+  try{
+    const b64=await toB64(file);
+    const apiKey=localStorage.getItem('sk');
+    const ai=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:300,messages:[{role:'user',content:[
         {type:'image',source:{type:'base64',media_type:file.type,data:b64}},
-        {type:'text',text:'Lue kuitista: kauppa/asema nimi, loppusumma euroina, päivämäärä pp.kk.vvvv, lyhyt kuvaus. Palauta VAIN JSON: {"kauppa":"","summa":0.00,"pvm":"","kuvaus":""}'}
+        {type:'text',text:'Lue kuitista: kaupan nimi, loppusumma euroina, päivämäärä pp.kk.vvvv, lyhyt kuvaus. Palauta VAIN JSON: {"kauppa":"","summa":0.00,"pvm":"","kuvaus":""}'}
       ]}]})
     });
-    const data = await ai.json();
-    const text = data.content?.[0]?.text||'{}';
-    let info = {};
-    try{ info = JSON.parse(text.replace(/```json|```/g,'').trim()); }catch{}
-    
-    st.innerHTML = '<div class="status"><span class="spinner"></span>Tallennetaan Driveen...</div>';
-    await tallennaDrive(file, b64, info);
-    
-    kuitit.push({...info, b64, type:file.type, m:kuukausi, y:vuosi});
+    const data=await ai.json();
+    let info={};
+    try{ info=JSON.parse((data.content?.[0]?.text||'{}').replace(/```json|```/g,'').trim()); }catch{}
+    st.innerHTML='<div class="status"><span class="spinner"></span>Tallennetaan Driveen...</div>';
+    await tallennaDrive(file,info);
+    kuitit.push({...info,b64,type:file.type,m:kuukausi,y:vuosi});
     paivita();
-    st.innerHTML = '<div class="status" style="color:green">✓ Tallennettu!</div>';
-    setTimeout(()=>st.innerHTML='', 3000);
-  } catch(err) {
-    st.innerHTML = `<div class="status" style="color:red">Virhe: ${err.message}</div>`;
+    st.innerHTML='<div class="status" style="color:green">✓ Tallennettu!</div>';
+    setTimeout(()=>st.innerHTML='',3000);
+  }catch(err){
+    st.innerHTML=`<div class="status" style="color:red">Virhe: ${err.message}</div>`;
   }
 }
 
@@ -224,38 +211,38 @@ async function toB64(file){
   return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result.split(',')[1]); r.onerror=rej; r.readAsDataURL(file); });
 }
 
-async function tallennaDrive(file, b64, info){
+async function tallennaDrive(file,info){
   if(!token) return;
-  const folder = await getFolder('Kuitit '+vuosi+'/'+MONTHS[kuukausi]);
-  const name = (info.pvm||'kuitti')+'_'+(info.kauppa||'kuitti')+'.'+file.name.split('.').pop();
-  const form = new FormData();
-  form.append('metadata', new Blob([JSON.stringify({name,parents:[folder]})],{type:'application/json'}));
-  form.append('file', file);
+  const folder=await getFolder('Kuitit '+vuosi+'/'+MONTHS[kuukausi]);
+  const name=(info.pvm||'kuitti')+'_'+(info.kauppa||'kuitti')+'.'+file.name.split('.').pop();
+  const form=new FormData();
+  form.append('metadata',new Blob([JSON.stringify({name,parents:[folder]})],{type:'application/json'}));
+  form.append('file',file);
   await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{
-    method:'POST', headers:{'Authorization':'Bearer '+token}, body:form
+    method:'POST',headers:{'Authorization':'Bearer '+token},body:form
   });
 }
 
 async function getFolder(path){
-  let parent = 'root';
+  let parent='root';
   for(const part of path.split('/')){
-    const q = encodeURIComponent(`name='${part}' and mimeType='application/vnd.google-apps.folder' and '${parent}' in parents and trashed=false`);
-    const r = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)`,{headers:{'Authorization':'Bearer '+token}});
-    const d = await r.json();
-    if(d.files?.length){ parent = d.files[0].id; }
-    else {
-      const cr = await fetch('https://www.googleapis.com/drive/v3/files',{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({name:part,mimeType:'application/vnd.google-apps.folder',parents:[parent]})});
-      parent = (await cr.json()).id;
+    const q=encodeURIComponent(`name='${part}' and mimeType='application/vnd.google-apps.folder' and '${parent}' in parents and trashed=false`);
+    const r=await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)`,{headers:{'Authorization':'Bearer '+token}});
+    const d=await r.json();
+    if(d.files?.length){ parent=d.files[0].id; }
+    else{
+      const cr=await fetch('https://www.googleapis.com/drive/v3/files',{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({name:part,mimeType:'application/vnd.google-apps.folder',parents:[parent]})});
+      parent=(await cr.json()).id;
     }
   }
   return parent;
 }
 
 function lataaPDF(){
-  const lista = kuitit.filter(k=>k.m===kuukausi&&k.y===vuosi);
+  const lista=kuitit.filter(k=>k.m===kuukausi&&k.y===vuosi);
   if(!lista.length){alert('Ei kuitteja');return;}
-  const sum = lista.reduce((s,k)=>s+(parseFloat(k.summa)||0),0);
-  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"/><style>
+  const sum=lista.reduce((s,k)=>s+(parseFloat(k.summa)||0),0);
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"/><style>
     body{font-family:Arial,sans-serif;margin:15mm;color:#1a1a1a}
     h1{color:#2C2416;font-size:20pt;margin-bottom:2mm}
     h2{color:#888;font-size:10pt;font-weight:400;margin-bottom:8mm}
